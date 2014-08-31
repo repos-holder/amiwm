@@ -12,6 +12,7 @@ extern void set_sys_palette(void);
 extern void set_mwb_palette(void);
 extern void set_schwartz_palette(void);
 extern void set_custom_palette(char *fn);
+extern Cursor wm_curs;
 extern void add_toolitem(char *, char *, char *, int);
 extern Scrn *openscreen(char *, Window);
 extern void create_module(Scrn *, char *, char *);
@@ -68,6 +69,7 @@ static int ti_level=0;
 %token <num> TITLEBARCLOCK TITLECLOCKFORMAT
 %token <num> OPAQUEMOVE OPAQUERESIZE SCREENMENU STYLE CLASS TITLE ICONTITLE ICON
 %token <num> SHORTLABELICONS
+%token <num> USEDEFAULTCURSOR
 %token <ptr> STRING
 %token <num> NUMBER
 
@@ -112,6 +114,7 @@ stmt		: error
 		| FOCUS focuspolicy { prefs.focus=$2; }
 		| CUSTOMICONSONLY truth { prefs.customiconsonly = $2; }
 		| SHORTLABELICONS truth { prefs.shortlabelicons = $2; }
+		| USEDEFAULTCURSOR truth { if($2==True) wm_curs = None; }
 		| TITLEBARCLOCK truth { prefs.titlebarclock = $2; }
 		| TITLECLOCKFORMAT string { prefs.titleclockformat = $2; }
 		| TITLECLOCKFORMAT NUMBER string { 

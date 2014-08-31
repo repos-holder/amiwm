@@ -778,7 +778,7 @@ void menuaction(struct Item *i, struct Item *si)
     if(item==0)
       restart_amiwm();
 #endif
-    if(item>0) {
+    if(item>=1) {
       int it=0, si=-1;
       for(ti=firsttoolitem; ti; ti=ti->next) {
 	if(ti->level>0)

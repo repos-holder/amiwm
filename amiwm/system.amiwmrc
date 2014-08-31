@@ -4,6 +4,7 @@ IconPalette MagicWB
 DefaultIcon "def_tool.info"
 CustomIconsOnly Off
 ShortLabelIcons Off
+UseDefaultCursor Off
 TitlebarClock Off
 TitleClockFormat "%c"
 Screen "Workbench Screen"

@@ -153,6 +153,7 @@ struct keyword { char *name; int token; } keywords[] = {
   { "titleclockformat", TITLECLOCKFORMAT },
   { "toolitem", TOOLITEM },
   { "true", YES },
+  { "usedefaultcursor", USEDEFAULTCURSOR },
   { "yes", YES }
 };
 
