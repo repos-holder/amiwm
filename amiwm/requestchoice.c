@@ -77,11 +77,7 @@ void addchoice(const char *txt)
     firstchoice=c;
   lastchoice=c;
   c->l=strlen(c->text=txt);
-#ifdef USE_FONTSETS
-  totw+=(c->w=XmbTextEscapement(dri.dri_FontSet, c->text, c->l))+BUT_BUTSPACE;
-#else
   totw+=(c->w=XTextWidth(dri.dri_Font, c->text, c->l))+BUT_BUTSPACE;
-#endif
   nchoices++;
 }
 
@@ -94,12 +90,8 @@ void addline(const char *txt)
     firstline=l;
   lastline=l;
   l->l=strlen(l->text=txt);
-#ifdef USE_FONTSETS
-  l->w=XmbTextEscapement(dri.dri_FontSet, l->text, l->l);
-#else
   l->w=XTextWidth(dri.dri_Font, l->text, l->l);
-#endif
-  toth+=l->h=dri.dri_Ascent+dri.dri_Descent;
+  toth+=l->h=dri.dri_Font->ascent+dri.dri_Font->descent;
   if(l->w>maxw)
     maxw=l->w;
 }
@@ -108,9 +100,9 @@ void refresh_text()
 {
   int w=totw-BUT_EXTSPACE-BUT_EXTSPACE;
   int h=toth-TXT_TOPSPACE-TXT_MIDSPACE-TXT_BOTSPACE-BUT_VSPACE-
-    (dri.dri_Ascent+dri.dri_Descent);
+    (dri.dri_Font->ascent+dri.dri_Font->descent);
   int x=(totw-maxw+TXT_HSPACE)>>1;
-  int y=((dri.dri_Ascent+dri.dri_Descent)>>1)+dri.dri_Ascent;
+  int y=((dri.dri_Font->ascent+dri.dri_Font->descent)>>1)+dri.dri_Font->ascent;
   struct line *l;
   XSetForeground(dpy, gc, dri.dri_Pens[SHADOWPEN]);
   XDrawLine(dpy, textwin, gc, 0, 0, w-2, 0);
@@ -120,27 +112,18 @@ void refresh_text()
   XDrawLine(dpy, textwin, gc, w-1, 0, w-1, h-1);  
   XSetForeground(dpy, gc, dri.dri_Pens[TEXTPEN]);
   for(l=firstline; l; l=l->next) {
-#ifdef USE_FONTSETS
-    XmbDrawString(dpy, textwin, dri.dri_FontSet, gc, x, y, l->text, l->l);
-#else
     XDrawString(dpy, textwin, gc, x, y, l->text, l->l);
-#endif
-    y+=dri.dri_Ascent+dri.dri_Descent;
+    y+=dri.dri_Font->ascent+dri.dri_Font->descent;
   }
 }
 
 void refresh_choice(struct choice *c)
 {
   int w=c->w+BUT_BUTSPACE;
-  int h=dri.dri_Ascent+dri.dri_Descent+BUT_VSPACE;
+  int h=dri.dri_Font->ascent+dri.dri_Font->descent+BUT_VSPACE;
   XSetForeground(dpy, gc, dri.dri_Pens[TEXTPEN]);
-#ifdef USE_FONTSETS
-  XmbDrawString(dpy, c->win, dri.dri_FontSet, gc, BUT_BUTSPACE/2,
-		dri.dri_Ascent+BUT_VSPACE/2, c->text, c->l);
-#else
   XDrawString(dpy, c->win, gc, BUT_BUTSPACE/2,
-	      dri.dri_Ascent+BUT_VSPACE/2, c->text, c->l);
-#endif
+	      dri.dri_Font->ascent+BUT_VSPACE/2, c->text, c->l);
   XSetForeground(dpy, gc, dri.dri_Pens[(c==selected && depressed)?
 				     SHADOWPEN:SHINEPEN]);
   XDrawLine(dpy, c->win, gc, 0, 0, w-2, 0);
@@ -234,7 +217,7 @@ int main(int argc, char *argv[])
       split(atp->ptr, "|\n", addchoice);
 
   totw+=BUT_EXTSPACE+BUT_EXTSPACE+BUT_INTSPACE*(nchoices-1);
-  toth+=2*(dri.dri_Ascent+dri.dri_Descent)+TXT_TOPSPACE+
+  toth+=2*(dri.dri_Font->ascent+dri.dri_Font->descent)+TXT_TOPSPACE+
     TXT_MIDSPACE+TXT_BOTSPACE+BUT_VSPACE;
   maxw+=TXT_HSPACE+BUT_EXTSPACE+BUT_EXTSPACE;
 
@@ -248,9 +231,7 @@ int main(int argc, char *argv[])
 			      dri.dri_Pens[BACKGROUNDPEN]);
   gc=XCreateGC(dpy, mainwin, 0, NULL);
   XSetBackground(dpy, gc, dri.dri_Pens[BACKGROUNDPEN]);
-#ifndef USE_FONTSETS
   XSetFont(dpy, gc, dri.dri_Font->fid);
-#endif
   stipple=XCreatePixmap(dpy, mainwin, 2, 2, attr.depth);
   XSetForeground(dpy, gc, dri.dri_Pens[BACKGROUNDPEN]);
   XFillRectangle(dpy, stipple, gc, 0, 0, 2, 2);
@@ -261,18 +242,18 @@ int main(int argc, char *argv[])
   textwin=XCreateSimpleWindow(dpy, mainwin, BUT_EXTSPACE, TXT_TOPSPACE, totw-
 			      BUT_EXTSPACE-BUT_EXTSPACE, toth-TXT_TOPSPACE-
 			      TXT_MIDSPACE-TXT_BOTSPACE-BUT_VSPACE-
-			      (dri.dri_Ascent+dri.dri_Descent),
+			      (dri.dri_Font->ascent+dri.dri_Font->descent),
 			      0, dri.dri_Pens[SHADOWPEN],
 			      dri.dri_Pens[BACKGROUNDPEN]);
   XSelectInput(dpy, textwin, ExposureMask);
   x=BUT_EXTSPACE;
-  y=toth-TXT_BOTSPACE-(dri.dri_Ascent+dri.dri_Descent)-BUT_VSPACE;
+  y=toth-TXT_BOTSPACE-(dri.dri_Font->ascent+dri.dri_Font->descent)-BUT_VSPACE;
   for(c=firstchoice; c; c=c->next) {
     c->win=XCreateSimpleWindow(dpy, mainwin,
 			       x+(nchoices==1? (extra>>1):
 				  n++*extra/(nchoices-1)),
 			       y, c->w+BUT_BUTSPACE,
-			       dri.dri_Ascent+dri.dri_Descent+
+			       dri.dri_Font->ascent+dri.dri_Font->descent+
 			       BUT_VSPACE, 0,
 			       dri.dri_Pens[SHADOWPEN],
 			       dri.dri_Pens[BACKGROUNDPEN]);

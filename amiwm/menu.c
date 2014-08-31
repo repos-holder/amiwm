@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <time.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -14,12 +13,6 @@
 #include "client.h"
 #include "icon.h"
 #include "version.h"
-
-#define ABOUT_STRING(LF) \
-     " " LF "version "VERSION LF "by Marcus Comstedt" LF \
-     "<marcus@lysator.liu.se>" LF " " LF \
-     "Contributions by Scott Lawrence" LF "<amiwm10@umlautllama.com>" LF \
-     "and Nicolas Sipieter " LF "<freeeaks@gmail.com>" LF " " LF
 
 #ifdef AMIGAOS
 #include <pragmas/xlib_pragmas.h>
@@ -160,14 +153,10 @@ static void menu_layout(struct Menu *menu)
   menu->width=menu->height=0;
   for(item=menu->firstitem; item; item=item->next) {
     if(item->text)
-      menu->height+=scr->dri.dri_Ascent+scr->dri.dri_Descent+1;
+      menu->height+=scr->dri.dri_Font->ascent+scr->dri.dri_Font->descent+1;
     else
       menu->height+=6;
-#ifdef USE_FONTSETS
-    w=XmbTextEscapement(scr->dri.dri_FontSet, item->text, item->textlen)+2;
-#else
     w=XTextWidth(scr->dri.dri_Font, item->text, item->textlen)+2;
-#endif
     if(item->hotkey)
       w+=scr->hotkeyspace;
     if(item->flags&CHECKIT)
@@ -191,7 +180,7 @@ static void menu_layout(struct Menu *menu)
   XSelectInput(dpy, menu->parent, ExposureMask);
   w=1;
   for(item=menu->firstitem; item; item=item->next) {
-    int h=(item->text? scr->dri.dri_Ascent+scr->dri.dri_Descent+1:6);
+    int h=(item->text? scr->dri.dri_Font->ascent+scr->dri.dri_Font->descent+1:6);
     item->win=XCreateWindow(dpy, menu->parent, 3, w, menu->width-6, h, 0,
 			    CopyFromParent, InputOutput, CopyFromParent,
 			    CWOverrideRedirect|CWBackPixel, &attr);
@@ -212,11 +201,7 @@ static struct Menu *add_menu(const char *name, char flags)
   if(menu) {
     attr.override_redirect=True;
     attr.background_pixel=scr->dri.dri_Pens[BARBLOCKPEN];
-#ifdef USE_FONTSETS
-    w=XmbTextEscapement(scr->dri.dri_FontSet, name, menu->titlelen=strlen(name))+8;
-#else
     w=XTextWidth(scr->dri.dri_Font, name, menu->titlelen=strlen(name))+8;
-#endif
     menu->win=XCreateWindow(dpy, scr->menubarparent, scr->menuleft, 0, w, scr->bh-1, 0,
 			    CopyFromParent, InputOutput, CopyFromParent,
 			    CWOverrideRedirect|CWBackPixel, &attr);
@@ -280,20 +265,14 @@ void redraw_menu(struct Menu *m, Window w)
 					      BARDETAILPEN]);
   XSetBackground(dpy, scr->menubargc, scr->dri.dri_Pens[active?BARDETAILPEN:
 					      BARBLOCKPEN]);
-#ifdef USE_FONTSETS
-  XmbDrawImageString(dpy, w, scr->dri.dri_FontSet,
-		     scr->menubargc, 4, 1+scr->dri.dri_Ascent,
-		     m->title, m->titlelen);
-#else
-  XDrawImageString(dpy, w, scr->menubargc, 4, 1+scr->dri.dri_Ascent,
+  XDrawImageString(dpy, w, scr->menubargc, 4, 1+scr->dri.dri_Font->ascent,
 		   m->title, m->titlelen);
-#endif
 }
 
 void redraw_item(struct Item *i, Window w)
 {
   struct Menu *m=i->menu;
-  int s=scr->dri.dri_Ascent>>1;
+  int s=scr->dri.dri_Font->ascent>>1;
   if((i==activeitem || i==activesubitem) && !(i->flags&DISABLED)) {
     XSetForeground(dpy, scr->menubargc, scr->dri.dri_Pens[BARBLOCKPEN]);
     XSetBackground(dpy, scr->menubargc, scr->dri.dri_Pens[BARDETAILPEN]);
@@ -302,57 +281,33 @@ void redraw_item(struct Item *i, Window w)
     XSetBackground(dpy, scr->menubargc, scr->dri.dri_Pens[BARBLOCKPEN]);
   }
   if(i->text)
-#ifdef USE_FONTSETS
-    XmbDrawImageString(dpy, w, scr->dri.dri_FontSet,
-		       scr->menubargc, (i->flags&CHECKIT)?1+scr->checkmarkspace:1,
-		       scr->dri.dri_Ascent+1, i->text, i->textlen);
-#else
     XDrawImageString(dpy, w, scr->menubargc, (i->flags&CHECKIT)?1+scr->checkmarkspace:1,
-		     scr->dri.dri_Ascent+1, i->text, i->textlen);
-#endif
+		     scr->dri.dri_Font->ascent+1, i->text, i->textlen);
   else
     XFillRectangle(dpy, w, scr->menubargc, 2, 2, m->width-10, 2);
   if(i->sub) {
     int x=m->width-6-scr->hotkeyspace-1+8;
-#ifdef USE_FONTSETS
-#ifdef HAVE_XUTF8DRAWIMAGESTRING
-    Xutf8DrawImageString(dpy, w, scr->dri.dri_FontSet,
-			 scr->menubargc, x+scr->dri.dri_Ascent+1,
-			 1+scr->dri.dri_Ascent, "\302\273", 2);
-#else
-    XmbDrawImageString(dpy, w, scr->dri.dri_FontSet,
-		       scr->menubargc, x+scr->dri.dri_Ascent+1,
-		       1+scr->dri.dri_Ascent, "»", 1);
-#endif
-#else
-    XDrawImageString(dpy, w, scr->menubargc, x+scr->dri.dri_Ascent+1,
-		     1+scr->dri.dri_Ascent, "»", 1);
-#endif
+    XDrawImageString(dpy, w, scr->menubargc, x+scr->dri.dri_Font->ascent+1,
+		     1+scr->dri.dri_Font->ascent, "»", 1);
   } else if(i->hotkey) {
     int x=m->width-6-scr->hotkeyspace-1+8;
     XDrawLine(dpy, w, scr->menubargc, x, 1+s, x+s, 1);
     XDrawLine(dpy, w, scr->menubargc, x+s, 1, x+s+s, 1+s);
     XDrawLine(dpy, w, scr->menubargc, x+s+s, 1+s, x+s, 1+s+s);
     XDrawLine(dpy, w, scr->menubargc, x+s, 1+s+s, x, 1+s);
-#ifdef USE_FONTSETS
-    XmbDrawImageString(dpy, w, scr->dri.dri_FontSet,
-		       scr->menubargc, x+scr->dri.dri_Ascent+1,
-		       1+scr->dri.dri_Ascent, &i->hotkey, 1);
-#else
-    XDrawImageString(dpy, w, scr->menubargc, x+scr->dri.dri_Ascent+1,
-		     1+scr->dri.dri_Ascent, &i->hotkey, 1);
-#endif
+    XDrawImageString(dpy, w, scr->menubargc, x+scr->dri.dri_Font->ascent+1,
+		     1+scr->dri.dri_Font->ascent, &i->hotkey, 1);
   }
   if(i->flags&CHECKED) {
-    XDrawLine(dpy, w, scr->menubargc, 0, s, s, scr->dri.dri_Ascent);
-    XDrawLine(dpy, w, scr->menubargc, s, scr->dri.dri_Ascent, s+s, 0);
+    XDrawLine(dpy, w, scr->menubargc, 0, s, s, scr->dri.dri_Font->ascent);
+    XDrawLine(dpy, w, scr->menubargc, s, scr->dri.dri_Font->ascent, s+s, 0);
   }
   if(i->flags&DISABLED) {
     XSetStipple(dpy, scr->menubargc, scr->disabled_stipple);
     XSetFillStyle(dpy, scr->menubargc, FillStippled);
     XSetForeground(dpy, scr->menubargc, scr->dri.dri_Pens[BARBLOCKPEN]);
     XFillRectangle(dpy, w, scr->menubargc, 0, 0,
-		   m->width-6, scr->dri.dri_Ascent+scr->dri.dri_Descent+1);
+		   m->width-6, scr->dri.dri_Font->ascent+scr->dri.dri_Font->descent+1);
     XSetFillStyle(dpy, scr->menubargc, FillSolid);
   }
 }
@@ -393,19 +348,17 @@ void createmenubar()
   XDrawPoint(dpy, scr->disabled_stipple, gc, 3, 1);
   XFreeGC(dpy, gc);
   scr->menubargc=XCreateGC(dpy, scr->menubar, 0, NULL); 
-#ifndef USE_FONTSETS
   XSetFont(dpy, scr->menubargc, scr->dri.dri_Font->fid);
-#endif
   XSetBackground(dpy, scr->menubargc, scr->dri.dri_Pens[BARBLOCKPEN]);
   XSelectInput(dpy, scr->menubar, ExposureMask|ButtonPressMask|ButtonReleaseMask);
   XSelectInput(dpy, scr->menubardepth, ExposureMask|ButtonPressMask|
 	       ButtonReleaseMask|EnterWindowMask|LeaveWindowMask);
   XMapWindow(dpy, scr->menubardepth);
   XMapWindow(dpy, scr->menubar);
-  scr->hotkeyspace=8+1+scr->dri.dri_MaxBoundsWidth+
-    scr->dri.dri_Ascent;
-  scr->checkmarkspace=4+scr->dri.dri_Ascent;
-  scr->subspace=scr->hotkeyspace-scr->dri.dri_Ascent;
+  scr->hotkeyspace=8+1+scr->dri.dri_Font->max_bounds.width+
+    scr->dri.dri_Font->ascent;
+  scr->checkmarkspace=4+scr->dri.dri_Font->ascent;
+  scr->subspace=scr->hotkeyspace-scr->dri.dri_Font->ascent;
   scr->menuleft=4;
   m=add_menu("Workbench", 0);
   add_item(m,"Backdrop",'B',CHECKIT|CHECKED|DISABLED);
@@ -472,18 +425,10 @@ void createmenubar()
       menu_layout(ti->submenu);
       ti->submenu=NULL;
     }
-  if(prefs.screenmenu) {
-    m=add_menu("Screens",0);
-    add_item(m,"New Screen",0,0);
-    add_item(m,"Delete Screen",0,0);
-    menu_layout(m);
-  }
 }
 
 void redrawmenubar(Window w)
 {
-  static const char defaultTimeFormat[] = "%c";
-
   struct Menu *m;
   struct Item *item;
 
@@ -492,36 +437,10 @@ void redrawmenubar(Window w)
   if(w==scr->menubar) {
     XSetForeground(dpy, scr->menubargc, scr->dri.dri_Pens[BARDETAILPEN]);
     XSetBackground(dpy, scr->menubargc, scr->dri.dri_Pens[BARBLOCKPEN]);
-#ifdef USE_FONTSETS
-    XmbDrawImageString(dpy, w, scr->dri.dri_FontSet,
-		       scr->menubargc, 4, 1+scr->dri.dri_Ascent,
-		       scr->title, strlen(scr->title));
-#else
-    XDrawImageString(dpy, w, scr->menubargc, 4, 1+scr->dri.dri_Ascent,
+    XDrawImageString(dpy, w, scr->menubargc, 4, 1+scr->dri.dri_Font->ascent,
 		     scr->title, strlen(scr->title));
-#endif
     XSetForeground(dpy, scr->menubargc, scr->dri.dri_Pens[BARTRIMPEN]);  
     XDrawLine(dpy, w, scr->menubargc, 0, scr->bh-1, scr->width-1, scr->bh-1);
-    if( prefs.titlebarclock )
-    {
-      char clockbuf[512];
-      const char * fmt = defaultTimeFormat;
-      time_t the_time;
-      int l;
-      if( prefs.titleclockformat ) fmt = prefs.titleclockformat;
-      time( &the_time );
-      strftime( clockbuf, 512, fmt, localtime( &the_time ) );
-#ifdef USE_FONTSETS
-      l = XmbTextEscapement(scr->dri.dri_FontSet, clockbuf, strlen(clockbuf));
-      XmbDrawImageString(dpy, w, scr->dri.dri_FontSet, scr->menubargc,
-			 (scr->width-30-l), 1+scr->dri.dri_Ascent,
-			 clockbuf, strlen(clockbuf));
-#else
-      l = XTextWidth(scr->dri.dri_Font, clockbuf, strlen(clockbuf));
-      XDrawImageString( dpy, w, scr->menubargc,(scr->width-30-l),
-			1+scr->dri.dri_Ascent, clockbuf, strlen(clockbuf));
-#endif
-    }    
   } else if(w==scr->menubardepth) {
     if(!mbdclick) {
       XSetForeground(dpy, scr->menubargc, scr->dri.dri_Pens[SHADOWPEN]);
@@ -687,7 +606,6 @@ void menu_on()
 void menuaction(struct Item *i, struct Item *si)
 {
   extern void restart_amiwm(void);
-  extern int screen_has_clients(void);
   struct Menu *m;
   struct Item *mi;
   struct ToolItem *ti;
@@ -734,16 +652,24 @@ void menuaction(struct Item *i, struct Item *si)
     case 5:
 #ifdef AMIGAOS
       spawn(BIN_PREFIX"requestchoice >NIL: amiwm \""
-	    ABOUT_STRING("*N") "\" Ok");
+	     "version "VERSION"*Nby Marcus Comstedt*N"
+	     "<marcus@lysator.liu.se>"
+	     "\" Ok");
 #else
       spawn(BIN_PREFIX"requestchoice >/dev/null amiwm '"
-	    ABOUT_STRING("\n") "' Ok");
+	     "version "VERSION"\nby Marcus Comstedt\n"
+	     "<marcus@lysator.liu.se>"
+	     "' Ok");
 #endif
       break;      
     case 6:
 #ifndef AMIGAOS
       if(prefs.fastquit) {
 #endif
+	flushmodules();
+	flushclients();
+	XFlush(dpy);
+	XCloseDisplay(dpy);
 	exit(0);
 #ifndef AMIGAOS
       } else {
@@ -790,22 +716,6 @@ void menuaction(struct Item *i, struct Item *si)
 	if(it==item && si==sub) break;
       }
       if(ti && ti->cmd) spawn(ti->cmd);
-    }
-    break;
-  case 4: /* Screens */
-    if(item==0) {
-      openscreen("New Screen", DefaultRootWindow(dpy));
-      realizescreens();
-      scr=front->upfront;
-      screentoback();
-    }
-    if(item==1) {
-      if(scr->behind == scr)
-	wberror(scr,"Cannot close last Screen");
-      else if(screen_has_clients())
-	wberror(scr,"Can't close a screen with running programs on it");
-      else
-	closescreen();
     }
     break;
   }
@@ -862,7 +772,7 @@ void menu_off()
   }
 }
 
-struct Item *getitembyhotkey(KeySym key)
+struct Item *getitembyhotkey(char key)
 {
   struct Menu *m;
   struct Item *i;

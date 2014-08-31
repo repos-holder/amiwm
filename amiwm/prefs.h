@@ -7,16 +7,8 @@ extern struct prefs_struct {
   int forcemove;
   int borderwidth;
   int autoraise;
-  int opaquemove;
-  int opaqueresize;
-  int customiconsonly;
-  int shortlabelicons;
   char *icondir, *module_path, *defaulticon;
-  int focus, manage_all, screenmenu;
-  int titlebarclock;			/* display titlebar clock? */
-  char *titleclockformat;		/* format to use for the clock */
-  int titleclockinterval;		/* how often do we update the clock?*/
-  struct _Style *firststyle, *laststyle;
+  int focus, manage_all;
 } prefs;
 
 #define FM_MANUAL 0
